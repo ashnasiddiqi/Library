@@ -1,7 +1,9 @@
 import express, { json } from "express";
+import axios from "axios";
 
 const app = express();
 const PORT = 3000;
+const GOOGLE_BOOKS_API_URL = "https://www.googleapis.com/books/v1/volumes";
 
 // Middleware to parse JSON requests
 app.use(json());
@@ -33,8 +35,33 @@ app.delete("/user", (req, res) => {
 let bookList = [{ Name: "title", ISBN: "123456789" }];
 
 // Get all books
-app.get("/book", (req, res) => {
-  res.json({ book: bookList });
+app.get("/book", async (req, res) => {
+  try {
+    const query = req.query.q;
+    if (!query) {
+      return res.json({ book: bookList });
+    }
+    const response = await axios.get(`${GOOGLE_BOOKS_API_URL}?q=${query}`);
+    const apiBooks = response.data.items
+      ? response.data.items.map((item) => ({
+          title: item.volumeInfo.title,
+          authors: item.volumeInfo.authors,
+          isbn:
+            item.volumeInfo.industryIdentifiers?.find(
+              (identifier) => indentifer.type == "ISBN_13"
+            )?.identifitier ||
+            item.volumeInfo.industryIdentifiers?.find(
+              (identifier) => identifier.type === "ISBN_10"
+            )?.identifier,
+          description: item.volumeInfo.description,
+          thumbnail: item.volumeInfo.imageLinks?.thumbnail,
+        }))
+      : [];
+    res.json({ books: apiBooks });
+  } catch (error) {
+    console.error("Error fetching books from Google Books API:", error);
+    res.status(500).json({ error: "Failed to fetch books from the API" });
+  }
 });
 
 // Post a new book
