@@ -48,8 +48,8 @@ app.get("/book", async (req, res) => {
           authors: item.volumeInfo.authors,
           isbn:
             item.volumeInfo.industryIdentifiers?.find(
-              (identifier) => indentifer.type == "ISBN_13"
-            )?.identifitier ||
+              (identifier) => identifier.type === "ISBN_13"
+            )?.identifier ||
             item.volumeInfo.industryIdentifiers?.find(
               (identifier) => identifier.type === "ISBN_10"
             )?.identifier,
