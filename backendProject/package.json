@@ -11,5 +11,9 @@
   "description": "",
   "dependencies": {
     "express": "^5.1.0"
+  },
+  "devDependencies": {
+    "eslint-plugin-react-dom": "^1.49.0",
+    "eslint-plugin-react-x": "^1.49.0"
   }
 }
