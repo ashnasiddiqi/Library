@@ -1,0 +1,18 @@
+<body>
+    <div id="book-image" style="width: 200px; height: 300px;"></div>
+    <div id="book-title" style="flex: 1; font-size: 2rem;"></div>
+  
+    <script>
+      const params = new URLSearchParams(window.location.search);
+      const bookId = params.get("bookId");
+  
+      fetch(`https://www.googleapis.com/books/v1/volumes/${bookId}`)
+        .then(res => res.json())
+        .then(book => {
+          document.getElementById("book-title").textContent = book.volumeInfo.title;
+          document.getElementById("book-image").innerHTML =
+            `<img src="${book.volumeInfo.imageLinks?.thumbnail}" alt="${book.volumeInfo.title}" style="width: 100%; height: auto;">`;
+        });
+    </script>
+  </body>
+  
