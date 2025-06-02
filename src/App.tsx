@@ -1,8 +1,15 @@
-import React, { useState } from 'react';
-import SearchBar from './components/SearchBar';
-import RecommendedBooks from './components/RecommendedBooks';
-import Auth from './components/Auth';
-import './components/style.css';
+import React, { useState } from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  useLocation,
+} from "react-router-dom";
+import SearchBar from "./components/SearchBar";
+import RecommendedBooks from "./components/RecommendedBooks";
+import Auth from "./components/Auth";
+import BookInteraction from "./components/BookInteraction";
+import "./components/style.css";
 
 interface User {
   id: string;
@@ -11,18 +18,14 @@ interface User {
   role: string;
 }
 
-const App: React.FC = () => {
-  const [searchResults, setSearchResults] = useState<any[] | null>(null);
-  const [user, setUser] = useState<User | null>(null);
-
-  const handleLogin = (user: User, token: string) => {
-    setUser(user);
-  };
-
-  const handleLogout = () => {
-    setUser(null);
-    localStorage.removeItem('token');
-  };
+const AppContent: React.FC<{
+  user: User | null;
+  handleLogin: (user: User, token: string) => void;
+  handleLogout: () => void;
+  searchResults: any[] | null;
+  setSearchResults: (results: any[] | null) => void;
+}> = ({ user, handleLogin, handleLogout, searchResults, setSearchResults }) => {
+  const location = useLocation();
 
   return (
     <div className="App">
@@ -36,14 +39,51 @@ const App: React.FC = () => {
               <p>Welcome, {user.username}!</p>
               <button onClick={handleLogout}>Logout</button>
             </>
-          ) : (
+          ) : location.pathname === "/" ? (
             <Auth onLogin={handleLogin} />
-          )}
+          ) : null}
         </div>
       </header>
-      <SearchBar onResults={(results) => setSearchResults(results)} />
-      <RecommendedBooks overrideBooks={searchResults ?? undefined} />
+
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <>
+              <SearchBar onResults={(results) => setSearchResults(results)} />
+              <RecommendedBooks overrideBooks={searchResults ?? undefined} />
+            </>
+          }
+        />
+        <Route path="/books/:id" element={<BookInteraction />} />
+      </Routes>
     </div>
+  );
+};
+
+const App: React.FC = () => {
+  const [searchResults, setSearchResults] = useState<any[] | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+
+  const handleLogin = (user: User, token: string) => {
+    setUser(user);
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+    localStorage.removeItem("token");
+  };
+
+  return (
+    <Router>
+      <AppContent
+        user={user}
+        handleLogin={handleLogin}
+        handleLogout={handleLogout}
+        searchResults={searchResults}
+        setSearchResults={setSearchResults}
+      />
+    </Router>
   );
 };
 

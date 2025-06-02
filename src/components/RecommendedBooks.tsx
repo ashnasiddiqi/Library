@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 
 interface Book {
   id: string;
@@ -39,7 +40,7 @@ const recommendedTitles = [
   "Twilight",
   "The Lightning Thief",
   "World War Z",
-  "The Da Vinci Code"
+  "The Da Vinci Code",
 ];
 
 interface RecommendedBooksProps {
@@ -54,7 +55,7 @@ const RecommendedBooks: React.FC<RecommendedBooksProps> = ({
   const [showGenreFilter, setShowGenreFilter] = useState(false);
 
   useEffect(() => {
-    if (overrideBooks) return; 
+    if (overrideBooks) return;
     Promise.all(
       recommendedTitles.map((title) =>
         fetch(
@@ -71,23 +72,30 @@ const RecommendedBooks: React.FC<RecommendedBooksProps> = ({
   }, [overrideBooks]);
 
   const toShow = overrideBooks ?? books;
-  
+
   // Get unique genres from all books
   const allGenres = Array.from(
-    new Set(toShow.flatMap(book => book.volumeInfo.categories || []))
+    new Set(toShow.flatMap((book) => book.volumeInfo.categories || []))
   ).sort();
 
   // Filter books based on selected genre
   const filteredBooks = selectedGenre
-    ? toShow.filter(book => 
+    ? toShow.filter((book) =>
         book.volumeInfo.categories?.includes(selectedGenre)
       )
     : toShow;
 
   return (
     <div>
-      <div style={{ marginBottom: "1rem", display: "flex", gap: "1rem", alignItems: "center" }}>
-        <button 
+      <div
+        style={{
+          marginBottom: "1rem",
+          display: "flex",
+          gap: "1rem",
+          alignItems: "center",
+        }}
+      >
+        <button
           onClick={() => setShowGenreFilter(!showGenreFilter)}
           style={{
             padding: "0.5rem 1rem",
@@ -95,12 +103,12 @@ const RecommendedBooks: React.FC<RecommendedBooksProps> = ({
             color: "white",
             border: "none",
             borderRadius: "5px",
-            cursor: "pointer"
+            cursor: "pointer",
           }}
         >
           Filter by Genre
         </button>
-        
+
         {showGenreFilter && (
           <select
             value={selectedGenre}
@@ -108,7 +116,7 @@ const RecommendedBooks: React.FC<RecommendedBooksProps> = ({
             style={{
               padding: "0.5rem",
               borderRadius: "5px",
-              border: "1px solid #ccc"
+              border: "1px solid #ccc",
             }}
           >
             <option value="">All Genres</option>
@@ -123,9 +131,9 @@ const RecommendedBooks: React.FC<RecommendedBooksProps> = ({
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: "1rem" }}>
         {filteredBooks.map((book) => (
-          <a
+          <Link
             key={book.id}
-            href={`book.html?bookId=${book.id}`}
+            to={`/books/${book.id}`}
             style={{ textDecoration: "none", color: "inherit", width: 150 }}
           >
             <img
@@ -137,7 +145,7 @@ const RecommendedBooks: React.FC<RecommendedBooksProps> = ({
             <p style={{ margin: 0, fontSize: "0.8rem", color: "#666" }}>
               {book.volumeInfo.categories?.[0] || "No genre listed"}
             </p>
-          </a>
+          </Link>
         ))}
       </div>
     </div>
