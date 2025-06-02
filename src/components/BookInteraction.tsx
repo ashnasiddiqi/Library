@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
+import StarRating from "./StarRating";
 
 interface Book {
   id: string;
@@ -17,6 +18,7 @@ const BookInteraction = () => {
   const [book, setBook] = useState<Book | null>(null);
   const [comment, setComment] = useState("");
   const [comments, setComments] = useState<string[]>([]);
+  const [rating, setRating] = useState(0);
 
   useEffect(() => {
     const fetchBook = async () => {
@@ -42,7 +44,7 @@ const BookInteraction = () => {
     <div style={{ padding: "2rem" }}>
       <h1 style={{ marginBottom: "1rem" }}>{book.volumeInfo.title}</h1>
       <div style={{ display: "flex", gap: "2rem", alignItems: "flex-start" }}>
-        {/* Left: Book Cover */}
+       
         <img
           src={book.volumeInfo.imageLinks?.thumbnail}
           alt={book.volumeInfo.title}
@@ -53,8 +55,14 @@ const BookInteraction = () => {
           }}
         />
 
-        {/* Right: Comments Section */}
         <div style={{ flex: 1 }}>
+          <h2>Rate This Book</h2>
+
+          <StarRating onRatingSelect={(value: number) => setRating(value)} />
+          <p>
+            Your rating: {rating} star{rating !== 1 ? "s" : ""}
+          </p>
+
           <h2>Comments</h2>
           <textarea
             value={comment}
