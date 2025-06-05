@@ -43,42 +43,51 @@ const recommendedTitles = [
   "The Da Vinci Code",
 ];
 
+// 🔁 Simple memory cache (survives navigation but not full page reload)
+const cachedBooks: Record<string, Book> = {};
+
 interface RecommendedBooksProps {
   overrideBooks?: Book[];
 }
 
-const RecommendedBooks: React.FC<RecommendedBooksProps> = ({
-  overrideBooks,
-}) => {
+const RecommendedBooks: React.FC<RecommendedBooksProps> = ({ overrideBooks }) => {
   const [books, setBooks] = useState<Book[]>([]);
   const [selectedGenre, setSelectedGenre] = useState<string>("");
   const [showGenreFilter, setShowGenreFilter] = useState(false);
 
-  useEffect(() => {
-    if (overrideBooks) return;
-    Promise.all(
-      recommendedTitles.map((title) =>
-        fetch(
-          `https://www.googleapis.com/books/v1/volumes?q=intitle:${encodeURIComponent(
-            title
-          )}`
-        )
-          .then((res) => res.json())
-          .then((data) => data.items?.[0])
+useEffect(() => {
+  if (overrideBooks) return;
+
+  const cached = localStorage.getItem("recommended_books");
+  if (cached) {
+    setBooks(JSON.parse(cached));
+    return;
+  }
+
+  Promise.all(
+    recommendedTitles.map((title) =>
+      fetch(
+        `https://www.googleapis.com/books/v1/volumes?q=intitle:${encodeURIComponent(title)}`
       )
+        .then((res) => res.json())
+        .then((data) => data.items?.[0])
     )
-      .then((results) => setBooks(results.filter(Boolean)))
-      .catch((err) => console.error("Failed to load books", err));
-  }, [overrideBooks]);
+  )
+    .then((results) => {
+      const filtered = results.filter(Boolean);
+      setBooks(filtered);
+      localStorage.setItem("recommended_books", JSON.stringify(filtered));
+    })
+    .catch((err) => console.error("Failed to load books", err));
+}, [overrideBooks]);
+
 
   const toShow = overrideBooks ?? books;
 
-  // Get unique genres from all books
   const allGenres = Array.from(
     new Set(toShow.flatMap((book) => book.volumeInfo.categories || []))
   ).sort();
 
-  // Filter books based on selected genre
   const filteredBooks = selectedGenre
     ? toShow.filter((book) =>
         book.volumeInfo.categories?.includes(selectedGenre)
