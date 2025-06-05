@@ -40,35 +40,38 @@ const BookInteraction = () => {
     }
   };
 
-  if (!book) return (
-    <div style={{ padding: "2rem" }}>
-      <button
-        onClick={() => navigate(-1)}
-        style={{
-          marginBottom: "2rem",
-          padding: "0.5rem 1rem",
-          backgroundColor: "#3498db",
-          color: "white",
-          border: "none",
-          borderRadius: "5px",
-          cursor: "pointer",
-          display: "flex",
-          alignItems: "center",
-          gap: "0.5rem"
-        }}
-      >
-        ← Back to Books
-      </button>
-      <p style={{ 
-        fontSize: "1.2rem", 
-        color: "#666",
-        textAlign: "center",
-        marginTop: "2rem" 
-      }}>
-        Loading book...
-      </p>
-    </div>
-  );
+  if (!book)
+    return (
+      <div style={{ padding: "2rem" }}>
+        <button
+          onClick={() => navigate(-1)}
+          style={{
+            marginBottom: "2rem",
+            padding: "0.5rem 1rem",
+            backgroundColor: "#3498db",
+            color: "white",
+            border: "none",
+            borderRadius: "5px",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.5rem",
+          }}
+        >
+          ← Back to Books
+        </button>
+        <p
+          style={{
+            fontSize: "1.2rem",
+            color: "#666",
+            textAlign: "center",
+            marginTop: "2rem",
+          }}
+        >
+          Loading book...
+        </p>
+      </div>
+    );
 
   return (
     <div style={{ padding: "2rem" }}>
@@ -84,14 +87,13 @@ const BookInteraction = () => {
           cursor: "pointer",
           display: "flex",
           alignItems: "center",
-          gap: "0.5rem"
+          gap: "0.5rem",
         }}
       >
         ← Back to Books
       </button>
       <h1 style={{ marginBottom: "1rem" }}>{book.volumeInfo.title}</h1>
       <div style={{ display: "flex", gap: "2rem", alignItems: "flex-start" }}>
-       
         <img
           src={book.volumeInfo.imageLinks?.thumbnail}
           alt={book.volumeInfo.title}
@@ -104,9 +106,12 @@ const BookInteraction = () => {
 
         <div style={{ flex: 1 }}>
           <h2>Description</h2>
-          <p style={{ marginBottom: "2rem" }}>
-            {book.volumeInfo.description || "Description not found"}
-          </p>
+          <p
+            style={{ marginBottom: "2rem" }}
+            dangerouslySetInnerHTML={{
+              __html: book.volumeInfo.description || "Description not found",
+            }}
+          ></p>
 
           <h2>Rate This Book</h2>
 
