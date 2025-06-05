@@ -142,4 +142,46 @@ router.delete("/:comment_id", verifyToken, verifyAdmin, async (req, res) => {
   }
 });
 
+// GET /comments/user - Get comments based on user role
+router.get("/user/comments", verifyToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const userRole = (await pool.query("SELECT role FROM users WHERE user_id = $1", [userId])).rows[0].role;
+
+    let query;
+    let queryParams;
+
+    if (userRole === "admin") {
+      // Fetch all comments with book and user details
+      query = `
+        SELECT c.comment_id, c.comment, c.created_at, c.updated_at, c.is_edited, 
+               u.username, b.google_book_id, b.title
+        FROM comments c
+        JOIN users u ON c.user_id = u.user_id
+        JOIN books b ON c.book_id = b.id
+        ORDER BY c.created_at DESC
+      `;
+      queryParams = [];
+    } else {
+      // Fetch comments for the logged-in user
+      query = `
+        SELECT c.comment_id, c.comment, c.created_at, c.updated_at, c.is_edited, 
+               u.username, b.google_book_id, b.title
+        FROM comments c
+        JOIN users u ON c.user_id = u.user_id
+        JOIN books b ON c.book_id = b.id
+        WHERE c.user_id = $1
+        ORDER BY c.created_at DESC
+      `;
+      queryParams = [userId];
+    }
+
+    const result = await pool.query(query, queryParams);
+    res.json({ comments: result.rows });
+  } catch (error) {
+    console.error("Error fetching user comments:", error);
+    res.status(500).json({ error: "Failed to fetch comments" });
+  }
+});
+
 export default router;

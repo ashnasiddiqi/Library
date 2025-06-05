@@ -4,11 +4,13 @@ import {
   Routes,
   Route,
   useLocation,
+  Link,
 } from "react-router-dom";
 import SearchBar from "./components/SearchBar";
 import RecommendedBooks from "./components/RecommendedBooks";
 import Auth from "./components/Auth";
 import BookInteraction from "./components/BookInteraction";
+import Profile from "./components/Profile"; 
 import "./components/style.css";
 
 interface User {
@@ -36,7 +38,9 @@ const AppContent: React.FC<{
         <div className="row2">
           {user ? (
             <>
-              <p>Welcome, {user.username}!</p>
+              <p>
+                Welcome, <Link to="/profile">{user.username}</Link>!
+              </p>
               <button onClick={handleLogout}>Logout</button>
             </>
           ) : location.pathname === "/" ? (
@@ -56,6 +60,7 @@ const AppContent: React.FC<{
           }
         />
         <Route path="/books/:id" element={<BookInteraction />} />
+        <Route path="/profile" element={<Profile user={user} />} />
       </Routes>
     </div>
   );
