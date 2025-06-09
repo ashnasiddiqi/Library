@@ -43,7 +43,6 @@ const recommendedTitles = [
   "The Da Vinci Code",
 ];
 
-// 🔁 Simple memory cache (survives navigation but not full page reload)
 const cachedBooks: Record<string, Book> = {};
 
 interface RecommendedBooksProps {
@@ -55,32 +54,31 @@ const RecommendedBooks: React.FC<RecommendedBooksProps> = ({ overrideBooks }) =>
   const [selectedGenre, setSelectedGenre] = useState<string>("");
   const [showGenreFilter, setShowGenreFilter] = useState(false);
 
-useEffect(() => {
-  if (overrideBooks) return;
+  useEffect(() => {
+    if (overrideBooks) return;
 
-  const cached = localStorage.getItem("recommended_books");
-  if (cached) {
-    setBooks(JSON.parse(cached));
-    return;
-  }
+    const cached = localStorage.getItem("recommended_books");
+    if (cached) {
+      setBooks(JSON.parse(cached));
+      return;
+    }
 
-  Promise.all(
-    recommendedTitles.map((title) =>
-      fetch(
-        `https://www.googleapis.com/books/v1/volumes?q=intitle:${encodeURIComponent(title)}`
+    Promise.all(
+      recommendedTitles.map((title) =>
+        fetch(
+          `https://www.googleapis.com/books/v1/volumes?q=intitle:${encodeURIComponent(title)}`
+        )
+          .then((res) => res.json())
+          .then((data) => data.items?.[0])
       )
-        .then((res) => res.json())
-        .then((data) => data.items?.[0])
     )
-  )
-    .then((results) => {
-      const filtered = results.filter(Boolean);
-      setBooks(filtered);
-      localStorage.setItem("recommended_books", JSON.stringify(filtered));
-    })
-    .catch((err) => console.error("Failed to load books", err));
-}, [overrideBooks]);
-
+      .then((results) => {
+        const filtered = results.filter(Boolean);
+        setBooks(filtered);
+        localStorage.setItem("recommended_books", JSON.stringify(filtered));
+      })
+      .catch((err) => console.error("Failed to load books", err));
+  }, [overrideBooks]);
 
   const toShow = overrideBooks ?? books;
 
@@ -143,7 +141,15 @@ useEffect(() => {
           <Link
             key={book.id}
             to={`/books/${book.id}`}
-            style={{ textDecoration: "none", color: "inherit", width: 150 }}
+            style={{
+              textDecoration: "none",
+              color: "inherit",
+              width: 150,
+              transition: "transform 0.2s",
+              transform: "scale(1)",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.05)")}
+            onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
           >
             <img
               src={book.volumeInfo.imageLinks?.thumbnail}
