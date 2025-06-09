@@ -32,7 +32,6 @@ const recommendedTitles = [
   "It Ends with Us",
   "Fourth Wing",
   "Eragon",
-  "Sunrise on the Reaping",
   "The Hunger Games",
   "Darkly Dreaming Dexter",
   "The Quantum Thief",
@@ -41,9 +40,49 @@ const recommendedTitles = [
   "The Lightning Thief",
   "World War Z",
   "The Da Vinci Code",
+  "The Alchemist",
+  "Percy Jackson and the Olympians",
+  "The Maze Runner",
+  "The Book Thief",
+  "Ready Player One",
+  "The Midnight Library",
+  "The Seven Husbands of Evelyn Hugo",
+  "Verity",
+  "Ugly Love",
+  "The Silent Patient",
+  "A Man Called Ove",
+  "The Night Circus",
+  "Where the Crawdads Sing",
+  "Beach Read",
+  "The Love Hypothesis",
+  "Project Hail Mary",
+  "Atomic Habits",
+  "Sapiens",
+  "Educated",
+  "The Subtle Art of Not Giving a F*ck",
+  "Can’t Hurt Me",
+  "Born a Crime",
+  "Before We Were Strangers",
+  "It Starts with Us",
+  "Little Fires Everywhere",
+  "Shatter Me",
+  "Anxious People",
+  "The Paris Library",
+  "Reminders of Him",
+  "The Paper Palace",
+  "All the Light We Cannot See",
+  "The Guest List",
+  "Daisy Jones & The Six",
+  "The House in the Cerulean Sea",
+  "The Spanish Love Deception",
+  "Circe",
+  "The Atlas Six",
+  "The Inheritance Games",
+  "The Silent Corner"
 ];
 
-const cachedBooks: Record<string, Book> = {};
+
+
 
 interface RecommendedBooksProps {
   overrideBooks?: Book[];
@@ -55,13 +94,14 @@ const RecommendedBooks: React.FC<RecommendedBooksProps> = ({ overrideBooks }) =>
   const [showGenreFilter, setShowGenreFilter] = useState(false);
 
   useEffect(() => {
-    if (overrideBooks) return;
+  if (overrideBooks) return;
 
-    const cached = localStorage.getItem("recommended_books");
-    if (cached) {
-      setBooks(JSON.parse(cached));
-      return;
-    }
+
+  const cached = localStorage.getItem("recommended_books");
+  if (cached) {
+    setBooks(JSON.parse(cached));
+    return;
+  }
 
     Promise.all(
       recommendedTitles.map((title) =>
