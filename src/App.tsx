@@ -10,7 +10,7 @@ import SearchBar from "./components/SearchBar";
 import RecommendedBooks from "./components/RecommendedBooks";
 import Auth from "./components/Auth";
 import BookInteraction from "./components/BookInteraction";
-import Profile from "./components/Profile"; 
+import Profile from "./components/Profile";
 import "./components/style.css";
 
 interface User {
@@ -55,7 +55,29 @@ const AppContent: React.FC<{
           element={
             <>
               <SearchBar onResults={(results) => setSearchResults(results)} />
-              <RecommendedBooks overrideBooks={searchResults ?? undefined} />
+
+              {searchResults && (
+                <div style={{ textAlign: "center", margin: "1rem 0" }}>
+                  <button
+                    onClick={() => setSearchResults(null)}
+                    style={{
+                      padding: "0.5rem 1.2rem",
+                      backgroundColor: "#e74c3c",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "5px",
+                      cursor: "pointer",
+                      fontWeight: "bold"
+                    }}
+                  >
+                    Clear Search / Home
+                  </button>
+                </div>
+              )}
+
+              <div className="main-content">
+                <RecommendedBooks overrideBooks={searchResults ?? undefined} />
+              </div>
             </>
           }
         />

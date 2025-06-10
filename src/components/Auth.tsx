@@ -43,70 +43,107 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
   };
 
   return (
-    <div className="container mt-4">
-      <div className="auth-form" style={{ maxWidth: '400px', margin: '0 auto' }}>
-        <h2 className="text-center">{isSignUp ? 'Sign Up' : 'Login'}</h2>
-        {error && <p className="text-center" style={{ color: 'red' }}>{error}</p>}
-        {success && <p className="text-center" style={{ color: 'green' }}>{success}</p>}
-        <form onSubmit={handleSubmit}>
-          {isSignUp && (
-            <div className="form-group mt-2">
-              <label>Username</label>
-              <input
-                type="text"
-                className="form-control"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="Enter username"
-                required
-              />
-            </div>
-          )}
-          <div className="form-group mt-2">
-            <label>Email</label>
+    <div
+      style={{
+        maxWidth: '500px',
+        margin: '5rem auto',
+        padding: '2.5rem',
+        backgroundColor: '#1e1e1e',
+        borderRadius: '12px',
+        boxShadow: '0 0 15px rgba(0,0,0,0.5)',
+      }}
+    >
+      <h2 style={{ textAlign: 'center', color: '#f5c78c' }}>
+        {isSignUp ? 'Sign Up' : 'Login'}
+      </h2>
+
+      {error && <p style={{ color: 'red', textAlign: 'center' }}>{error}</p>}
+      {success && <p style={{ color: 'lightgreen', textAlign: 'center' }}>{success}</p>}
+
+      <form onSubmit={handleSubmit}>
+        {isSignUp && (
+          <div style={{ marginBottom: '1rem' }}>
             <input
-              type="email"
-              className="form-control"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter email"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Username"
               required
+              style={inputStyle}
             />
           </div>
-          <div className="form-group mt-2">
-            <label>Password</label>
-            <input
-              type="password"
-              className="form-control"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter password"
-              required
-            />
-          </div>
-          <button type="submit" className="btn mt-3 w-100">
-            {isSignUp ? 'Sign Up' : 'Login'}
-          </button>
-        </form>
-        <p className="text-center mt-2">
-          {isSignUp ? 'Already have an account?' : 'Need an account?'}
-          <button
-            className="btn btn-link"
-            onClick={() => {
-              setIsSignUp(!isSignUp);
-              setError('');
-              setSuccess('');
-              setUsername('');
-              setEmail('');
-              setPassword('');
-            }}
-          >
-            {isSignUp ? 'Login' : 'Sign Up'}
-          </button>
-        </p>
-      </div>
+        )}
+        <div style={{ marginBottom: '1rem' }}>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Email"
+            required
+            style={inputStyle}
+          />
+        </div>
+        <div style={{ marginBottom: '1rem' }}>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Password"
+            required
+            style={inputStyle}
+          />
+        </div>
+
+        <button type="submit" style={buttonStyle}>
+          {isSignUp ? 'Sign Up' : 'Login'}
+        </button>
+      </form>
+
+      <p style={{ marginTop: '1rem', textAlign: 'center', color: '#ccc' }}>
+        {isSignUp ? 'Already have an account?' : 'Need an account?'}{' '}
+        <button
+          onClick={() => {
+            setIsSignUp(!isSignUp);
+            setError('');
+            setSuccess('');
+            setUsername('');
+            setEmail('');
+            setPassword('');
+          }}
+          style={{
+            background: 'none',
+            color: '#3498db',
+            border: 'none',
+            cursor: 'pointer',
+            padding: 0,
+            fontSize: '1rem',
+          }}
+        >
+          {isSignUp ? 'Login' : 'Sign Up'}
+        </button>
+      </p>
     </div>
   );
+};
+
+const inputStyle: React.CSSProperties = {
+  width: '100%',
+  padding: '0.85rem',
+  borderRadius: '5px',
+  border: '1px solid #444',
+  backgroundColor: '#2b2b2b',
+  color: 'white',
+};
+
+const buttonStyle: React.CSSProperties = {
+  width: '100%',
+  padding: '0.85rem',
+  backgroundColor: '#3498db',
+  color: 'white',
+  border: 'none',
+  borderRadius: '5px',
+  cursor: 'pointer',
+  fontWeight: 'bold',
 };
 
 export default Auth;

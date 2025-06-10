@@ -186,3 +186,39 @@ html{
     text-align: justify;
     font-size: 13px;
 }
+.search-bar-wrapper {
+  display: flex;
+  justify-content: center;
+  margin: 2rem 0;
+}
+
+.search-bar-form {
+  display: flex;
+  gap: 0.5rem;
+  width: 100%;
+  max-width: 600px;
+}
+
+.search-bar-form input {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--secondary-color);
+  background-color: #fefefe;
+  font-size: 1rem;
+}
+
+.search-bar-form button {
+  padding: 0.75rem 1.5rem;
+  background-color: var(--secondary-color);
+  color: var(--primary-color);
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.search-bar-form button:hover {
+  background-color: #c6a97e;
+}

@@ -64,7 +64,6 @@ const recommendedTitles = [
   "Born a Crime",
   "Before We Were Strangers",
   "It Starts with Us",
-  "Little Fires Everywhere",
   "Shatter Me",
   "Anxious People",
   "The Paris Library",
