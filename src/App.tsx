@@ -101,7 +101,8 @@ const App: React.FC = () => {
   const [searchResults, setSearchResults] = useState<any[] | null>(null);
   const [user, setUser] = useState<User | null>(null);
 
-  const handleLogin = (user: User, token: string) => {
+  const handleLogin = (user: User, _token: string) => {
+
     setUser(user);
   };
 
