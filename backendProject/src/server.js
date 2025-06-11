@@ -20,6 +20,12 @@ app.use("/api/users", userRoutes);
 app.use("/api/ratings", ratingRoutes);
 app.use("/api/comments", commentRoutes);
 
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ error: 'Something broke!' });
+});
+
 // Root test route
 app.get("/", (req, res) => {
   res.send("📚 Library Lookup API is running!");

@@ -2,11 +2,11 @@ import express from "express";
 import axios from "axios";
 import pool from "../db.js";
 import jwt from "jsonwebtoken";
+import { JWT_SECRET } from "../db.js";
 
 const router = express.Router();
 const GOOGLE_BOOKS_API_URL = "https://www.googleapis.com/books/v1/volumes";
 const GOOGLE_BOOKS_API_KEY = "YOUR_API_KEY_HERE"; // Replace with your Google Books API key
-const JWT_SECRET = "your_jwt_secret"; // Replace with environment variable in production
 
 // Middleware to verify JWT and check admin role
 const verifyAdmin = async (req, res, next) => {
@@ -181,6 +181,52 @@ router.delete("/:google_book_id/tags/:tag_name", verifyAdmin, async (req, res) =
   } catch (error) {
     console.error("Error removing tag:", error);
     res.status(500).json({ error: "Failed to remove tag" });
+  }
+});
+
+// POST /books - Create or update a book
+router.post("/", async (req, res) => {
+  const { google_book_id, title, authors, description, image_url } = req.body;
+
+  if (!google_book_id || !title) {
+    return res.status(400).json({ error: "Book ID and title are required" });
+  }
+
+  try {
+    // First check if book exists
+    const existingBook = await pool.query(
+      "SELECT id FROM books WHERE google_book_id = $1",
+      [google_book_id]
+    );
+
+    let result;
+    if (existingBook.rowCount === 0) {
+      // Create new book
+      result = await pool.query(
+        `INSERT INTO books (google_book_id, title, authors, description, image_url) 
+         VALUES ($1, $2, $3, $4, $5) 
+         RETURNING *`,
+        [google_book_id, title, authors, description, image_url]
+      );
+    } else {
+      // Update existing book
+      result = await pool.query(
+        `UPDATE books 
+         SET title = $2, authors = $3, description = $4, image_url = $5
+         WHERE google_book_id = $1
+         RETURNING *`,
+        [google_book_id, title, authors, description, image_url]
+      );
+    }
+
+    if (!result.rows[0]) {
+      throw new Error("Failed to save book");
+    }
+
+    res.status(201).json({ book: result.rows[0] });
+  } catch (error) {
+    console.error("Error saving book:", error);
+    res.status(500).json({ error: "Failed to save book" });
   }
 });
 

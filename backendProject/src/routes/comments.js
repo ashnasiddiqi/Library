@@ -1,9 +1,9 @@
 import express from "express";
 import pool from "../db.js";
 import jwt from "jsonwebtoken";
+import { JWT_SECRET } from "../db.js";
 
 const router = express.Router();
-const JWT_SECRET = "your_jwt_secret"; // Replace with environment variable in production
 
 // Middleware to verify JWT
 const verifyToken = (req, res, next) => {
@@ -34,26 +34,36 @@ const verifyAdmin = async (req, res, next) => {
 // POST /comments - Add a comment
 router.post("/", verifyToken, async (req, res) => {
   const { google_book_id, comment } = req.body;
+  console.log("Received comment request:", { google_book_id, comment, user_id: req.user.id });
 
   if (!google_book_id || !comment) {
-    return res.status(400).json({ error: "Book ID and comment required" });
+    return res.status(400).json({ error: "Book ID and comment are required" });
   }
 
   try {
-    // Ensure book exists
+    // First ensure the book exists
     const bookResult = await pool.query(
       "SELECT id FROM books WHERE google_book_id = $1",
       [google_book_id]
     );
+    console.log("Book query result:", bookResult.rows);
+
     if (bookResult.rowCount === 0) {
-      return res.status(404).json({ error: "Book not found" });
+      return res.status(404).json({ error: "Book not found. Please try again." });
     }
+
     const book_id = bookResult.rows[0].id;
+    console.log("Found book_id:", book_id);
 
     const result = await pool.query(
       "INSERT INTO comments (book_id, user_id, comment) VALUES ($1, $2, $3) RETURNING *",
       [book_id, req.user.id, comment]
     );
+    console.log("Comment insert result:", result.rows);
+
+    if (!result.rows[0]) {
+      throw new Error("Failed to save comment");
+    }
 
     res.status(201).json({
       message: "Comment added successfully",
@@ -65,11 +75,22 @@ router.post("/", verifyToken, async (req, res) => {
   }
 });
 
-// GET /comments/:book_id - Get all comments for a book
-router.get("/:book_id", async (req, res) => {
-  const { book_id } = req.params;
+// GET /comments/:google_book_id - Get all comments for a book
+router.get("/:google_book_id", async (req, res) => {
+  const { google_book_id } = req.params;
 
   try {
+    const bookResult = await pool.query(
+      "SELECT id FROM books WHERE google_book_id = $1",
+      [google_book_id]
+    );
+    
+    if (bookResult.rowCount === 0) {
+      return res.status(404).json({ error: "Book not found" });
+    }
+    
+    const book_id = bookResult.rows[0].id;
+    
     const result = await pool.query(
       `SELECT c.comment_id, c.comment, c.created_at, c.updated_at, c.is_edited, u.username
        FROM comments c

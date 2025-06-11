@@ -1,9 +1,11 @@
 {
   "name": "backendproject",
   "version": "1.0.0",
-  "main": "hw2.js",
+  "type": "module",
+  "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js"
   },
   "keywords": [],
   "author": "",
@@ -11,12 +13,14 @@
   "description": "",
   "dependencies": {
     "bcrypt": "^6.0.0",
+    "cors": "^2.8.5",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
     "pg": "^8.16.0"
   },
   "devDependencies": {
     "eslint-plugin-react-dom": "^1.49.0",
-    "eslint-plugin-react-x": "^1.49.0"
+    "eslint-plugin-react-x": "^1.49.0",
+    "nodemon": "^3.0.1"
   }
 }

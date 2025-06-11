@@ -1,29 +1,68 @@
 import express from "express";
 import pool from "../db.js";
+import jwt from "jsonwebtoken";
+import { JWT_SECRET } from "../db.js";
 
 const router = express.Router();
 
-// POST /ratings - Add a rating
-router.post("/", async (req, res) => {
-  const { user_id, google_book_id, rating } = req.body;
-
-  if (!user_id || !google_book_id || !rating || rating < 1 || rating > 5) {
-    return res.status(400).json({ error: "Invalid input" });
+// Middleware to verify JWT
+const verifyToken = (req, res, next) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  console.log("Received token:", token);
+  
+  if (!token) {
+    console.log("No token provided");
+    return res.status(401).json({ error: "Unauthorized" });
   }
 
   try {
-    // Ensure book exists
-    const bookResult = await pool.query(
-      "INSERT INTO books (google_book_id, title) VALUES ($1, $2) ON CONFLICT (google_book_id) DO NOTHING RETURNING id",
-      [google_book_id, "Unknown Title"]
-    );
+    const decoded = jwt.verify(token, JWT_SECRET);
+    console.log("Decoded token:", decoded);
+    req.user = decoded;
+    next();
+  } catch (err) {
+    console.error("Token verification error:", err);
+    return res.status(401).json({ error: "Invalid token" });
+  }
+};
 
-    const book_id = bookResult.rows[0]?.id || (await pool.query("SELECT id FROM books WHERE google_book_id = $1", [google_book_id])).rows[0].id;
+// POST /ratings - Add a rating
+router.post("/", verifyToken, async (req, res) => {
+  const { google_book_id, rating } = req.body;
+  console.log("Received rating request:", { google_book_id, rating, user_id: req.user.id });
+
+  if (!google_book_id || !rating || rating < 1 || rating > 5) {
+    return res.status(400).json({ error: "Invalid rating value. Please provide a rating between 1 and 5." });
+  }
+
+  try {
+    // First ensure the book exists
+    const bookResult = await pool.query(
+      "SELECT id FROM books WHERE google_book_id = $1",
+      [google_book_id]
+    );
+    console.log("Book query result:", bookResult.rows);
+
+    if (bookResult.rowCount === 0) {
+      return res.status(404).json({ error: "Book not found. Please try again." });
+    }
+
+    const book_id = bookResult.rows[0].id;
+    console.log("Found book_id:", book_id);
 
     const result = await pool.query(
-      "INSERT INTO ratings (user_id, book_id, rating) VALUES ($1, $2, $3) ON CONFLICT (user_id, book_id) DO UPDATE SET rating = EXCLUDED.rating RETURNING *",
-      [user_id, book_id, rating]
+      `INSERT INTO ratings (user_id, book_id, rating) 
+       VALUES ($1, $2, $3) 
+       ON CONFLICT (book_id, user_id) 
+       DO UPDATE SET rating = EXCLUDED.rating 
+       RETURNING *`,
+      [req.user.id, book_id, rating]
     );
+    console.log("Rating insert result:", result.rows);
+
+    if (!result.rows[0]) {
+      throw new Error("Failed to save rating");
+    }
 
     res.status(201).json({
       message: "Rating saved successfully",
@@ -35,11 +74,22 @@ router.post("/", async (req, res) => {
   }
 });
 
-// GET /ratings/:book_id - Get all ratings for a book
-router.get("/:book_id", async (req, res) => {
-  const { book_id } = req.params;
+// GET /ratings/:google_book_id - Get all ratings for a book
+router.get("/:google_book_id", async (req, res) => {
+  const { google_book_id } = req.params;
 
   try {
+    const bookResult = await pool.query(
+      "SELECT id FROM books WHERE google_book_id = $1",
+      [google_book_id]
+    );
+    
+    if (bookResult.rowCount === 0) {
+      return res.status(404).json({ error: "Book not found" });
+    }
+    
+    const book_id = bookResult.rows[0].id;
+    
     const result = await pool.query(
       `SELECT r.rating, u.username AS reviewer, r.created_at
        FROM ratings r
@@ -56,11 +106,22 @@ router.get("/:book_id", async (req, res) => {
   }
 });
 
-// GET /ratings/:book_id/average - Get average rating for a book
-router.get("/:book_id/average", async (req, res) => {
-  const { book_id } = req.params;
+// GET /ratings/:google_book_id/average - Get average rating for a book
+router.get("/:google_book_id/average", async (req, res) => {
+  const { google_book_id } = req.params;
 
   try {
+    const bookResult = await pool.query(
+      "SELECT id FROM books WHERE google_book_id = $1",
+      [google_book_id]
+    );
+    
+    if (bookResult.rowCount === 0) {
+      return res.status(404).json({ error: "Book not found" });
+    }
+    
+    const book_id = bookResult.rows[0].id;
+    
     const result = await pool.query(
       "SELECT AVG(rating) as average_rating, COUNT(rating) as rating_count FROM ratings WHERE book_id = $1",
       [book_id]

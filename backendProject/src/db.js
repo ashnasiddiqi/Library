@@ -1,5 +1,6 @@
 // db.js
-const { Pool } = require("pg");
+import pg from 'pg';
+const { Pool } = pg;
 
 const pool = new Pool({
   user: "postgres",
@@ -12,5 +13,5 @@ const pool = new Pool({
   },
 });
 
-//export default pool;
-module.exports = pool;
+export const JWT_SECRET = "your_jwt_secret";
+export default pool;
