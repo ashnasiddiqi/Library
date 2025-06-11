@@ -11,6 +11,7 @@ import RecommendedBooks from "./components/RecommendedBooks";
 import Auth from "./components/Auth";
 import BookInteraction from "./components/BookInteraction";
 import Profile from "./components/Profile";
+import AIBookBot from "./components/AIBookBot";
 import "./components/style.css";
 
 interface User {
@@ -30,7 +31,8 @@ const AppContent: React.FC<{
   const location = useLocation();
 
   return (
-    <div className="App">
+    <div style={{ position: "relative", minHeight: "100vh" }}>
+      {/* Your existing header and routes */}
       <header className="header">
         <div className="row1">
           <h1>Welcome to Library Lookup</h1>
@@ -88,6 +90,9 @@ const AppContent: React.FC<{
         <Route path="/books/:id" element={<BookInteraction user={user} />} />
         <Route path="/profile" element={<Profile user={user} />} />
       </Routes>
+
+      {/* AI Chatbot - placed at the end */}
+      <AIBookBot />
     </div>
   );
 };
