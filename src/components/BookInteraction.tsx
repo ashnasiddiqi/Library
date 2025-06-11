@@ -2,45 +2,212 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import StarRating from "./StarRating";
+import { Link } from "react-router-dom";
+import { User } from "../types";
+
+interface Comment {
+  comment_id: string;
+  comment: string;
+  created_at: string;
+  updated_at: string;
+  is_edited: boolean;
+  username: string;
+}
 
 interface Book {
   id: string;
   volumeInfo: {
     title: string;
     description?: string;
+    authors?: string[];
     imageLinks?: {
       thumbnail: string;
     };
   };
 }
 
-const BookInteraction = () => {
+interface BookInteractionProps {
+  user: User | null;
+}
+
+const BookInteraction: React.FC<BookInteractionProps> = ({ user }) => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [book, setBook] = useState<Book | null>(null);
   const [comment, setComment] = useState("");
-  const [comments, setComments] = useState<string[]>([]);
+  const [comments, setComments] = useState<Comment[]>([]);
   const [rating, setRating] = useState(0);
+  const [averageRating, setAverageRating] = useState(0);
+  const [ratingCount, setRatingCount] = useState(0);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    const fetchBook = async () => {
-      const response = await axios.get(
-        `https://www.googleapis.com/books/v1/volumes/${id}`
-      );
-      setBook(response.data);
+    const fetchBookData = async () => {
+      try {
+        // First, get the book from Google Books API
+        const bookResponse = await axios.get(
+          `https://www.googleapis.com/books/v1/volumes/${id}`
+        );
+        const bookData = bookResponse.data;
+        setBook(bookData);
+
+        // Then try to get comments and ratings
+        try {
+          const commentsResponse = await axios.get(
+            `http://localhost:3000/api/comments/${id}`
+          );
+          setComments(commentsResponse.data.comments);
+        } catch (error) {
+          console.error("Error fetching comments:", error);
+          setComments([]);
+        }
+
+        try {
+          const ratingResponse = await axios.get(
+            `http://localhost:3000/api/ratings/${id}/average`
+          );
+          setAverageRating(ratingResponse.data.average_rating);
+          setRatingCount(ratingResponse.data.rating_count);
+        } catch (error) {
+          console.error("Error fetching ratings:", error);
+          setAverageRating(0);
+          setRatingCount(0);
+        }
+      } catch (error) {
+        console.error("Error fetching book data:", error);
+        setError("Failed to load book data. Please try again later.");
+      }
     };
 
-    fetchBook();
+    fetchBookData();
   }, [id]);
 
-  const handleAddComment = () => {
-    if (comment.trim()) {
-      setComments([...comments, comment]);
-      setComment("");
+  const handleRating = async (value: number) => {
+    if (!user) {
+      setError("Please login to rate this book");
+      navigate("/");
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setError("Please login to rate this book");
+        navigate("/");
+        return;
+      }
+
+      // First ensure the book exists in our database
+      const bookResponse = await axios.post(
+        "http://localhost:3000/api/books",
+        {
+          google_book_id: id,
+          title: book?.volumeInfo.title || "Unknown Title",
+          authors: book?.volumeInfo.authors || [],
+          description: book?.volumeInfo.description || "",
+          image_url: book?.volumeInfo.imageLinks?.thumbnail || ""
+        }
+      );
+
+      if (!bookResponse.data.book) {
+        throw new Error("Failed to save book");
+      }
+
+      // Then save the rating
+      const response = await axios.post(
+        "http://localhost:3000/api/ratings",
+        {
+          google_book_id: id,
+          rating: value
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      if (response.data.rating) {
+        setRating(value);
+        // Refresh average rating
+        const ratingResponse = await axios.get(
+          `http://localhost:3000/api/ratings/${id}/average`
+        );
+        setAverageRating(ratingResponse.data.average_rating);
+        setRatingCount(ratingResponse.data.rating_count);
+        setError("");
+      }
+    } catch (error: any) {
+      console.error("Error details:", {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      if (error.response?.status === 401) {
+        setError("Please login to rate this book");
+        navigate("/");
+      } else {
+        setError(error.response?.data?.error || "Failed to save rating");
+      }
     }
   };
 
-  if (!book)
+  const handleAddComment = async () => {
+    if (!user) {
+      setError("Please login to add a comment");
+      navigate("/");
+      return;
+    }
+
+    if (!comment.trim()) {
+      setError("Comment cannot be empty");
+      return;
+    }
+
+    try {
+      // First ensure the book exists in our database
+      const bookResponse = await axios.post(
+        "http://localhost:3000/api/books",
+        {
+          google_book_id: id,
+          title: book?.volumeInfo.title || "Unknown Title",
+          authors: book?.volumeInfo.authors || [],
+          description: book?.volumeInfo.description || "",
+          image_url: book?.volumeInfo.imageLinks?.thumbnail || ""
+        }
+      );
+
+      if (!bookResponse.data.book) {
+        throw new Error("Failed to save book");
+      }
+
+      // Then save the comment
+      const response = await axios.post(
+        "http://localhost:3000/api/comments",
+        {
+          google_book_id: id,
+          comment: comment.trim()
+        },
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+        }
+      );
+
+      if (response.data.comment) {
+        setComments([response.data.comment, ...comments]);
+        setComment("");
+        setError("");
+      }
+    } catch (error: any) {
+      console.error("Error:", error);
+      if (error.response?.status === 401) {
+        setError("Please login to add a comment");
+        navigate("/");
+      } else {
+        setError(error.response?.data?.error || "Failed to add comment");
+      }
+    }
+  };
+
+  if (!book) {
     return (
       <div style={{ padding: "2rem" }}>
         <button
@@ -72,6 +239,7 @@ const BookInteraction = () => {
         </p>
       </div>
     );
+  }
 
   return (
     <div style={{ padding: "2rem" }}>
@@ -114,39 +282,79 @@ const BookInteraction = () => {
           ></p>
 
           <h2>Rate This Book</h2>
-
-          <StarRating onRatingSelect={(value: number) => setRating(value)} />
+          {error && <p style={{ color: "red" }}>{error}</p>}
+          {!user && (
+            <p style={{ color: "#666", marginBottom: "1rem" }}>
+              Please <Link to="/">login</Link> to rate this book
+            </p>
+          )}
+          <StarRating onRatingSelect={handleRating} />
           <p>
-            Your rating: {rating} star{rating !== 1 ? "s" : ""}
+            Average Rating: {averageRating} stars ({ratingCount} ratings)
           </p>
+          {rating > 0 && (
+            <p>
+              Your rating: {rating} star{rating !== 1 ? "s" : ""}
+            </p>
+          )}
 
           <h2>Comments</h2>
+          {!user && (
+            <p style={{ color: "#666", marginBottom: "1rem" }}>
+              Please <Link to="/">login</Link> to add a comment
+            </p>
+          )}
           <textarea
             value={comment}
             onChange={(e) => setComment(e.target.value)}
-            placeholder="Write your comment here..."
+            placeholder={user ? "Write your comment here..." : "Please login to comment"}
             rows={4}
             style={{
               width: "100%",
               padding: "0.5rem",
               fontSize: "1rem",
               borderRadius: "4px",
+              opacity: user ? 1 : 0.7,
             }}
+            disabled={!user}
           />
           <br />
           <button
             onClick={handleAddComment}
-            style={{ marginTop: "0.5rem", padding: "0.5rem 1rem" }}
+            style={{
+              marginTop: "0.5rem",
+              padding: "0.5rem 1rem",
+              opacity: user ? 1 : 0.7,
+              cursor: user ? "pointer" : "not-allowed",
+            }}
+            disabled={!user}
           >
             Add Comment
           </button>
 
           <h3 style={{ marginTop: "1.5rem" }}>All Comments</h3>
-          <ul>
-            {comments.map((c, idx) => (
-              <li key={idx}>{c}</li>
-            ))}
-          </ul>
+          {comments.length === 0 ? (
+            <p>No comments yet. Be the first to comment!</p>
+          ) : (
+            <ul style={{ listStyle: "none", padding: 0 }}>
+              {comments.map((comment) => (
+                <li
+                  key={comment.comment_id}
+                  style={{
+                    borderBottom: "1px solid #eee",
+                    padding: "1rem 0",
+                  }}
+                >
+                  <p style={{ margin: 0 }}>{comment.comment}</p>
+                  <small style={{ color: "#666" }}>
+                    By {comment.username} on{" "}
+                    {new Date(comment.created_at).toLocaleDateString()}
+                    {comment.is_edited && " (edited)"}
+                  </small>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
     </div>

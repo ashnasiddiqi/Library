@@ -45,7 +45,11 @@ const AppContent: React.FC<{
             </>
           ) : location.pathname === "/" ? (
             <Auth onLogin={handleLogin} />
-          ) : null}
+          ) : (
+            <Link to="/" style={{ color: 'white', textDecoration: 'none' }}>
+              Login to continue
+            </Link>
+          )}
         </div>
       </header>
 
@@ -81,7 +85,7 @@ const AppContent: React.FC<{
             </>
           }
         />
-        <Route path="/books/:id" element={<BookInteraction />} />
+        <Route path="/books/:id" element={<BookInteraction user={user} />} />
         <Route path="/profile" element={<Profile user={user} />} />
       </Routes>
     </div>

@@ -22,7 +22,10 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
     const payload = isSignUp ? { username, email, password } : { email, password };
 
     try {
+      console.log('Sending request to:', endpoint, payload); // Debug log
       const response = await axios.post(`http://localhost:3000${endpoint}`, payload);
+      console.log('Response:', response.data); // Debug log
+
       if (isSignUp) {
         setSuccess('Registration successful! Please log in.');
         setIsSignUp(false);
@@ -38,7 +41,8 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
         setPassword('');
       }
     } catch (err: any) {
-      setError(err.response?.data?.error || 'An error occurred');
+      console.error('Auth error:', err); // Debug log
+      setError(err.response?.data?.error || 'An error occurred. Please try again.');
     }
   };
 
