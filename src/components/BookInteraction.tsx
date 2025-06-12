@@ -1,11 +1,11 @@
-/* ---------  src/components/BookInteraction.tsx  --------- */
+/* --------  src/components/BookInteraction.tsx  -------- */
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { api } from "../api";         // backend axios
+import { api } from "../api";
 import StarRating from "./StarRating";
 import { User } from "../types";
 
-/* ────────────────── types ────────────────── */
+/* ─────────────── types ─────────────── */
 interface Comment {
   comment_id: string;
   comment: string;
@@ -23,57 +23,58 @@ interface Book {
     imageLinks?: { thumbnail: string };
   };
 }
-interface Props { user: User | null }
+interface Props {
+  user: User | null;
+}
 
-/* ────────────────── component ────────────────── */
+/* ───────────────── component ───────────────── */
 const BookInteraction: React.FC<Props> = ({ user }) => {
-  const { id }              = useParams<{ id: string }>();
-  const   navigate          = useNavigate();
+  const { id }               = useParams<{ id: string }>();
+  const   navigate           = useNavigate();
 
-  const [book,  setBook]           = useState<Book | null>(null);
-  const [commentText, setComment]  = useState("");
-  const [comments,     setComments]= useState<Comment[]>([]);
-  const [rating,       setRating]  = useState(0);
-  const [avg,  setAvg]             = useState(0);
-  const [count,setCount]           = useState(0);
-  const [err,  setErr]             = useState("");
+  const [book, setBook]              = useState<Book | null>(null);
+  const [commentText, setComment]    = useState("");
+  const [comments, setComments]      = useState<Comment[]>([]);
+  const [rating, setRating]          = useState(0);
+  const [avg, setAvg]                = useState(0);
+  const [count, setCount]            = useState(0);
+  const [err, setErr]                = useState("");
 
   /* ── first load ── */
   useEffect(() => {
     (async () => {
       try {
-        /* 1 ◾ Google Books (no credentials!) */
+        /* ① Google Books (no credentials) */
         const gRes   = await fetch(
           `https://www.googleapis.com/books/v1/volumes/${id}`
         );
         const gBook  = await gRes.json();
         setBook(gBook);
 
-        /* 2 ◾ our backend: comments + rating */
+        /* ② Backend – comments & ratings */
         const cRes = await api.get(`/api/comments/${id}`);
         setComments(cRes.data.comments);
 
         const rRes = await api.get(`/api/ratings/${id}/average`);
         setAvg(rRes.data.average_rating);
         setCount(rRes.data.rating_count);
-      } catch (e:any) {
-        console.error(e);
+      } catch {
         setErr("Couldn’t load book data – try again in a minute.");
       }
     })();
   }, [id]);
 
-  /* ───────────────── helpers ───────────────── */
+  /* ── helper: make sure the book exists server-side ── */
   const ensureBook = () =>
     api.post("/api/books", {
       google_book_id: id,
-      title:       book?.volumeInfo.title        ?? "Unknown",
-      authors:     book?.volumeInfo.authors      ?? [],
-      description: book?.volumeInfo.description  ?? "",
+      title:       book?.volumeInfo.title               ?? "Unknown",
+      authors:     book?.volumeInfo.authors             ?? [],
+      description: book?.volumeInfo.description         ?? "",
       image_url:   book?.volumeInfo.imageLinks?.thumbnail ?? "",
     });
 
-  /* ───────────────── rating ───────────────── */
+  /* ─────────────── rating ─────────────── */
   const handleRate = async (value: number) => {
     if (!user) return setErr("Login to rate");
 
@@ -86,16 +87,15 @@ const BookInteraction: React.FC<Props> = ({ user }) => {
       );
       setRating(value);
 
-      /* refresh average */
       const { data } = await api.get(`/api/ratings/${id}/average`);
       setAvg(data.average_rating);
       setCount(data.rating_count);
-    } catch (e:any) {
+    } catch (e: any) {
       setErr(e.response?.data?.error || "Could not save rating");
     }
   };
 
-  /* ───────────────── comment ───────────────── */
+  /* ─────────────── comment ─────────────── */
   const handleAddComment = async () => {
     if (!user)               return setErr("Login to comment");
     if (!commentText.trim()) return setErr("Comment can’t be empty");
@@ -109,58 +109,95 @@ const BookInteraction: React.FC<Props> = ({ user }) => {
       );
       setComments([data.comment, ...comments]);
       setComment("");
-    } catch (e:any) {
+    } catch (e: any) {
       setErr(e.response?.data?.error || "Couldn’t add comment");
     }
   };
 
-  /* ───────────────── render ───────────────── */
-  if (!book) return <p style={{ padding: 32 }}>Loading book…</p>;
+  /* ─────────────── render ─────────────── */
+  if (!book)
+    return (
+      <div style={{ padding: 32 }}>
+        <p>Loading book…</p>
+      </div>
+    );
 
   return (
     <div style={{ padding: 32 }}>
-      <button onClick={() => navigate(-1)} style={btnBack}>← Back</button>
+      <button onClick={() => navigate(-1)} style={btnBack}>
+        ← Back
+      </button>
 
       <h1>{book.volumeInfo.title}</h1>
       {err && <p style={{ color: "red" }}>{err}</p>}
 
-      {/* description + cover */}
-      <section style={{ display: "flex", gap: 32 }}>
+      {/* cover + description */}
+      <section
+        style={{
+          display: "flex",
+          gap: 32,
+          alignItems: "flex-start" /* ‼ no stretching */,
+        }}
+      >
         <img
           src={book.volumeInfo.imageLinks?.thumbnail}
           alt={book.volumeInfo.title}
-          style={{ width: 200, borderRadius: 8 }}
-        />
-        <p
-          dangerouslySetInnerHTML={{
-            __html: book.volumeInfo.description ?? "No description",
+          style={{
+            width: 180,
+            height: 260,       /* ‼ fixed height   */
+            objectFit: "cover",/* ‼ never stretch  */
+            borderRadius: 8,
+            boxShadow: "0 0 10px #0005",
           }}
         />
+
+        <div style={{ flex: 1 }}>
+          <p
+            dangerouslySetInnerHTML={{
+              __html: book.volumeInfo.description ?? "No description",
+            }}
+          />
+        </div>
       </section>
 
       {/* rating */}
       <h2>Rate this book</h2>
-      {!user && <p>Please <Link to="/">login</Link> to rate</p>}
+      {!user && (
+        <p>
+          Please <Link to="/">login</Link> to rate
+        </p>
+      )}
       <StarRating onRatingSelect={handleRate} />
-      <p>Average {avg} ★ ({count})</p>
+      <p>
+        Average {avg} ★ ({count})
+      </p>
       {rating > 0 && <p>Your rating: {rating} ★</p>}
 
       {/* comments */}
       <h2>Comments</h2>
-      {!user && <p>Please <Link to="/">login</Link> to comment</p>}
+      {!user && (
+        <p>
+          Please <Link to="/">login</Link> to comment
+        </p>
+      )}
       <textarea
         rows={3}
         style={{ width: "100%", marginBottom: 8 }}
         value={commentText}
-        onChange={e => setComment(e.target.value)}
+        onChange={(e) => setComment(e.target.value)}
         disabled={!user}
       />
       <br />
-      <button onClick={handleAddComment} disabled={!user}>Add</button>
+      <button onClick={handleAddComment} disabled={!user}>
+        Add
+      </button>
 
       <ul style={{ listStyle: "none", padding: 0, marginTop: 24 }}>
-        {comments.map(c => (
-          <li key={c.comment_id} style={{ borderBottom: "1px solid #eee", padding: 8 }}>
+        {comments.map((c) => (
+          <li
+            key={c.comment_id}
+            style={{ borderBottom: "1px solid #eee", padding: 8 }}
+          >
             <p>{c.comment}</p>
             <small>
               {c.username} – {new Date(c.created_at).toLocaleDateString()}
@@ -173,7 +210,7 @@ const BookInteraction: React.FC<Props> = ({ user }) => {
   );
 };
 
-/* ---------- tiny style helpers ---------- */
+/* ─────────────── tiny style helpers ─────────────── */
 const btnBack: React.CSSProperties = {
   marginBottom: 16,
   padding: "4px 10px",
