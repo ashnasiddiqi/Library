@@ -4,13 +4,12 @@
 We are focusing on 5 key functional features for our final project, limited to *featured books* for easier development and tagging.
 
 ## 1. Search and Filter Featured Books
-- Users can search through the list of featured books using keywords.
-- Users can also filter by tags (e.g., genre, popularity).
+- Users can search through the list of featured books using keywords related to genre.
 
 ## 2. Rate Featured Books
 - Users can click on a featured book to visit a detailed view page.
 - On this page, users can rate the book from 1 to 5 stars.
-- The average rating for each featured book will display on the front page.
+- The average rating for each featured book will display on the book's page.
 
 ## 3. Comment on Featured Books
 - Users can comment on featured books from the detail page.
