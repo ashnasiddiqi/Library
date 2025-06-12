@@ -22,4 +22,4 @@ We are focusing on 5 key functional features for our final project, limited to *
 - Tags will be used to organize books and enable tag-based filtering.
 
 ## 5. Book Recommendations
--Users can interact with an AI Chatbox to recieve book recommendations. 
+- Users can interact with an AI Chatbox to recieve book recommendations. 
