@@ -1,7 +1,7 @@
 
 # Functional Requirements – Library Project
 
-We are focusing on 4 key functional features for our final project, limited to *featured books* for easier development and tagging.
+We are focusing on 5 key functional features for our final project, limited to *featured books* for easier development and tagging.
 
 ## 1. Search and Filter Featured Books
 - Users can search through the list of featured books using keywords.
@@ -21,3 +21,5 @@ We are focusing on 4 key functional features for our final project, limited to *
 - Admins can add/edit tags for featured books.
 - Tags will be used to organize books and enable tag-based filtering.
 
+##5. Book Recommendations
+-Users can interact with an AI Chatbox to recieve book recommendations. 
