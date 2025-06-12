@@ -219,10 +219,12 @@ const BookInteraction: React.FC<Props> = ({ user }) => {
 
 /* ---------- inline styles ---------- */
 const card: React.CSSProperties = {
-  background: "#141414",
+  background: "rgba(20,20,20,0.80)",   // darker & slightly transparent
+  border: "1px solid #2e2e2e",         // subtle outline
   borderRadius: 12,
   padding: 24,
   boxShadow: "0 0 20px #00000055",
+  marginTop: 16,                       // a little breathing-room under header
 };
 
 const btnBack: React.CSSProperties = {
