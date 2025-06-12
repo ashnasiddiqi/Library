@@ -1,197 +1,164 @@
 /* ------------------  src/components/BookInteraction.tsx  ------------------ */
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import axios from "axios";          // ⬅️ plain axios (no credentials)
-import { api } from "../api";       // ⬅️ your shared instance for *backend* calls
-import StarRating from "./StarRating";
-import { User } from "../types";
+import axios from "axios";           // ✅ plain axios for Google
+import { api } from "../api";        // ✅ credentialed instance for our API
+import StarRating    from "./StarRating";
+import { User }      from "../types";
 
 /* ---------- Types ---------- */
 interface Comment {
-  comment_id: string;
-  comment: string;
-  created_at: string;
-  updated_at: string;
-  is_edited: boolean;
-  username: string;
+  comment_id:   string;
+  comment:      string;
+  created_at:   string;
+  updated_at:   string;
+  is_edited:    boolean;
+  username:     string;
 }
 interface Book {
-  id: string;
+  id:         string;
   volumeInfo: {
-    title: string;
-    description?: string;
-    authors?: string[];
+    title:       string;
+    description?:string;
+    authors?:    string[];
     imageLinks?: { thumbnail: string };
   };
 }
-interface BookInteractionProps { user: User | null }
-
+interface Props { user: User | null }
 /* ======================================================================== */
-const BookInteraction: React.FC<BookInteractionProps> = ({ user }) => {
-  const { id } = useParams<{ id: string }>();
-  const navigate  = useNavigate();
+const BookInteraction: React.FC<Props> = ({ user }) => {
+  const { id }  = useParams<{ id: string }>();
+  const nav     = useNavigate();
 
-  /* ---------- State ---------- */
   const [book,          setBook]          = useState<Book | null>(null);
   const [comment,       setComment]       = useState("");
   const [comments,      setComments]      = useState<Comment[]>([]);
   const [rating,        setRating]        = useState(0);
-  const [average,       setAverage]       = useState(0);
+  const [avgRating,     setAvgRating]     = useState(0);
   const [ratingCount,   setRatingCount]   = useState(0);
   const [error,         setError]         = useState("");
 
-  /* ---------- Initial load ---------- */
+  /* ─────────────────── initial load ─────────────────── */
   useEffect(() => {
     (async () => {
       try {
-        /* 1 ─ Google Books  (no credentials!) */
-        const { data } = await axios.get(
+        /* Google Books WITHOUT credentials */
+        const { data: gBook } = await axios.get(
           `https://www.googleapis.com/books/v1/volumes/${id}`
         );
-        setBook(data);
+        setBook(gBook);
 
-        /* 2 ─ comments */
-        const c = await api.get(`/api/comments/${id}`);
-        setComments(c.data.comments);
+        /* Comments */
+        const { data: cmt }  = await api.get(`/api/comments/${id}`);
+        setComments(cmt.comments);
 
-        /* 3 ─ ratings */
-        const r = await api.get(`/api/ratings/${id}/average`);
-        setAverage(r.data.average_rating);
-        setRatingCount(r.data.rating_count);
-      } catch (err: any) {
-        console.error(err);
-        setError("Failed to load data. Please try again later.");
+        /* Ratings */
+        const { data: rt }   = await api.get(`/api/ratings/${id}/average`);
+        setAvgRating(rt.average_rating);
+        setRatingCount(rt.rating_count);
+      } catch (e: any) {
+        console.error(e);
+        setError("Failed to load book data.");
       }
     })();
   }, [id]);
 
-  /* ---------- Helpers ---------- */
-  const ensureBookExists = () =>
-    api.post("/api/books", {
-      google_book_id: id,
-      title:        book?.volumeInfo.title             ?? "Unknown Title",
-      authors:      book?.volumeInfo.authors           ?? [],
-      description:  book?.volumeInfo.description       ?? "",
-      image_url:    book?.volumeInfo.imageLinks?.thumbnail ?? ""
-    });
+  /* ─────────────────── helpers ─────────────────── */
+  const ensureBook = () => api.post("/api/books", {
+    google_book_id: id,
+    title:        book?.volumeInfo.title ?? "Unknown",
+    authors:      book?.volumeInfo.authors ?? [],
+    description:  book?.volumeInfo.description ?? "",
+    image_url:    book?.volumeInfo.imageLinks?.thumbnail ?? ""
+  });
 
-  /* ---------- Rating ---------- */
-  const handleRating = async (value: number) => {
-    if (!user)        return setError("Please login to rate this book");
-    if (!book)        return;
-
+  /* ─────────────────── rating ─────────────────── */
+  const handleRate = async (val: number) => {
+    if (!user) return setError("Login to rate");          // guard
     try {
-      await ensureBookExists();
-      await api.post(
-        "/api/ratings",
-        { google_book_id: id, rating: value },
-        { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+      await ensureBook();
+      await api.post("/api/ratings",
+        { google_book_id: id, rating: val },
+        { headers:{ Authorization:`Bearer ${localStorage.getItem("token")}` }}
       );
-      setRating(value);
+      setRating(val);
       const { data } = await api.get(`/api/ratings/${id}/average`);
-      setAverage(data.average_rating);
+      setAvgRating(data.average_rating);
       setRatingCount(data.rating_count);
-      setError("");
-    } catch (e: any) {
-      setError(e.response?.data?.error || "Failed to save rating");
-    }
+    } catch (e:any){ setError(e.response?.data?.error||"Rating failed"); }
   };
 
-  /* ---------- Comment ---------- */
-  const handleAddComment = async () => {
-    if (!user)               return setError("Please login to comment");
-    if (!comment.trim())     return setError("Comment cannot be empty");
-    if (!book)               return;
-
+  /* ─────────────────── comment ─────────────────── */
+  const addComment = async () => {
+    if (!user)            return setError("Login to comment");
+    if (!comment.trim())  return setError("Comment can’t be empty");
     try {
-      await ensureBookExists();
-      const { data } = await api.post(
-        "/api/comments",
-        { google_book_id: id, comment: comment.trim() },
-        { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+      await ensureBook();
+      const { data } = await api.post("/api/comments",
+        { google_book_id:id, comment:comment.trim() },
+        { headers:{ Authorization:`Bearer ${localStorage.getItem("token")}` }}
       );
       setComments([data.comment, ...comments]);
       setComment("");
-      setError("");
-    } catch (e: any) {
-      setError(e.response?.data?.error || "Failed to add comment");
-    }
+    } catch (e:any){ setError(e.response?.data?.error||"Comment failed"); }
   };
 
-  /* ---------- Render ---------- */
-  if (!book)
-    return (
-      <div style={{ padding: "2rem" }}>
-        <button onClick={() => navigate(-1)} style={{ marginBottom: "1rem" }}>
-          ← Back
-        </button>
-        <p>Loading book…</p>
-      </div>
-    );
+  /* ─────────────────── render ─────────────────── */
+  if (!book) return (
+    <div style={{padding:"2rem"}}>
+      <button onClick={()=>nav(-1)} style={btnBack}>← Back</button>
+      <p style={{textAlign:"center"}}>Loading book…</p>
+    </div>
+  );
 
   return (
-    <div style={{ padding: "2rem" }}>
-      <button onClick={() => navigate(-1)} style={{ marginBottom: "1rem" }}>
-        ← Back
-      </button>
+    <div style={{padding:"2rem"}}>
+      <button onClick={()=>nav(-1)} style={btnBack}>← Back</button>
 
       <h1>{book.volumeInfo.title}</h1>
+      <div style={{display:"flex",gap:"2rem"}}>
+        <img src={book.volumeInfo.imageLinks?.thumbnail} alt=""
+             style={{width:200,borderRadius:8}} />
 
-      <div style={{ display: "flex", gap: "2rem" }}>
-        {book.volumeInfo.imageLinks?.thumbnail && (
-          <img
-            src={book.volumeInfo.imageLinks.thumbnail}
-            alt={book.volumeInfo.title}
-            style={{ width: 200 }}
-          />
-        )}
-
-        <div style={{ flex: 1 }}>
-          <h2>Description</h2>
-          <p
-            dangerouslySetInnerHTML={{
-              __html: book.volumeInfo.description ?? "No description",
-            }}
-          />
-
-          {/* --- Rating --- */}
-          <h2>Rate</h2>
-          <StarRating onRatingSelect={handleRating} />
-          <p>
-            Avg&nbsp;{average} ★ ({ratingCount})
-          </p>
-          {rating > 0 && <p>Your rating: {rating} ★</p>}
-
-          {/* --- Comments --- */}
-          <h2>Comments</h2>
-          <textarea
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-            rows={3}
-            style={{ width: "100%" }}
+        <div style={{flex:1}}>
+          {/* description */}
+          <div dangerouslySetInnerHTML={{
+            __html: book.volumeInfo.description ?? "No description"
+          }}/>
+          {/* rating */}
+          <h3>Rate this book</h3>
+          {error && <p style={{color:"red"}}>{error}</p>}
+          <StarRating onRatingSelect={handleRate}/>
+          <p>Average {avgRating} ⭐ ({ratingCount})</p>
+          {rating>0 && <p>Your rating: {rating} ⭐</p>}
+          {/* comments */}
+          <h3>Comments</h3>
+          <textarea rows={4} style={{width:"100%"}}
             disabled={!user}
+            value={comment} onChange={e=>setComment(e.target.value)}
+            placeholder={user?"Write a comment…":"Login to comment"}
           />
-          <button onClick={handleAddComment} disabled={!user}>
-            Add Comment
-          </button>
+          <button onClick={addComment} disabled={!user}>Add</button>
 
-          <ul style={{ listStyle: "none", padding: 0 }}>
-            {comments.map((c) => (
-              <li key={c.comment_id} style={{ padding: "0.5rem 0" }}>
+          <ul style={{listStyle:"none",padding:0}}>
+            {comments.map(c=>(
+              <li key={c.comment_id} style={{borderBottom:"1px solid #eee",padding:"1rem 0"}}>
                 <p>{c.comment}</p>
-                <small>
-                  {c.username} – {new Date(c.created_at).toLocaleDateString()}
-                  {c.is_edited && " (edited)"}
-                </small>
+                <small>by {c.username} on {new Date(c.created_at).toLocaleDateString()}
+                  {c.is_edited && " (edited)"}</small>
               </li>
             ))}
           </ul>
-
-          {error && <p style={{ color: "red" }}>{error}</p>}
         </div>
       </div>
     </div>
   );
+};
+
+/* ---------- tiny inline styles ---------- */
+const btnBack:React.CSSProperties={
+  marginBottom:"1rem",padding:"0.5rem 1rem",background:"#3498db",
+  color:"#fff",border:"none",borderRadius:5,cursor:"pointer"
 };
 
 export default BookInteraction;
