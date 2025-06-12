@@ -18,7 +18,6 @@ We are focusing on 5 key functional features for our final project, limited to *
 - Admins will have the ability to moderate (edit/delete) comments.
 
 ## 4. Tagging Featured Books
-- Admins can add/edit tags for featured books.
 - Tags will be used to organize books and enable tag-based filtering.
 
 ## 5. Book Recommendations
