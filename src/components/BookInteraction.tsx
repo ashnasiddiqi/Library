@@ -1,15 +1,16 @@
-/* -------- src/components/BookInteraction.tsx -------- */
+/* ---------- src/components/BookInteraction.tsx ---------- */
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { api } from "../api";
 import StarRating from "./StarRating";
 import { User } from "../types";
 
-/* ─────────────── types ─────────────── */
+/* ─── local types ─── */
 interface Comment {
   comment_id: string;
   comment: string;
   created_at: string;
+  updated_at: string;
   is_edited: boolean;
   username: string;
 }
@@ -24,167 +25,220 @@ interface Book {
 }
 interface Props { user: User | null }
 
-/* ───────────────── component ───────────────── */
-export default function BookInteraction({ user }: Props) {
+/* ======================================================================= */
+const BookInteraction: React.FC<Props> = ({ user }) => {
   const { id } = useParams<{ id: string }>();
-  const nav    = useNavigate();
+  const navigate = useNavigate();
 
-  /* state */
-  const [book, setBook]        = useState<Book | null>(null);
-  const [comments,setComments] = useState<Comment[]>([]);
-  const [comment,setComment]   = useState("");
-  const [rating,setRating]     = useState(0);
-  const [avg,setAvg]           = useState(0);
-  const [count,setCount]       = useState(0);
-  const [bookErr,setBookErr]   = useState("");
-  const [auxErr,setAuxErr]     = useState("");
+  /* ---------- state ---------- */
+  const [book,      setBook]     = useState<Book | null>(null);
+  const [comments,  setComments] = useState<Comment[]>([]);
+  const [comment,   setComment]  = useState("");
+  const [rating,    setRating]   = useState(0);
+  const [avg,       setAvg]      = useState(0);
+  const [count,     setCount]    = useState(0);
+  const [err,       setErr]      = useState("");
 
-  /* ── load ── */
+  /* ---------- first load ---------- */
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch(
-          `https://www.googleapis.com/books/v1/volumes/${id}`
+        /* 1 ◾ Google Books – credentials **omitted** to avoid CORS block */
+        const gRes = await fetch(
+          `https://www.googleapis.com/books/v1/volumes/${id}`,
+          { credentials: "omit", mode: "cors" }
         );
-        if (!res.ok) throw new Error("google");
-        setBook(await res.json());
-      } catch { setBookErr("Couldn’t load book data."); return; }
+        if (!gRes.ok) throw new Error("google-fail");
+        setBook(await gRes.json());
+      } catch {
+        setErr("Couldn’t load book data – try again later.");
+        return;
+      }
 
+      /* 2 ◾ comments + rating (non-fatal if they fail) */
       try {
         const { data } = await api.get(`/api/comments/${id}`);
         setComments(data.comments);
-        const r = await api.get(`/api/ratings/${id}/average`);
-        setAvg(r.data.average_rating); setCount(r.data.rating_count);
-      } catch {/* ignore aux errors */}
+      } catch {/* ignore */}
+
+      try {
+        const { data } = await api.get(`/api/ratings/${id}/average`);
+        setAvg(data.average_rating);
+        setCount(data.rating_count);
+      } catch {/* ignore */}
     })();
   }, [id]);
 
-  /* helper */
-  const ensureBook = () => api.post("/api/books", {
-    google_book_id: id,
-    title: book?.volumeInfo.title ?? "Unknown",
-    authors: book?.volumeInfo.authors ?? [],
-    description: book?.volumeInfo.description ?? "",
-    image_url: book?.volumeInfo.imageLinks?.thumbnail ?? "",
-  });
+  /* ---------- shared helper ---------- */
+  const ensureBook = () =>
+    api.post("/api/books", {
+      google_book_id: id,
+      title:       book?.volumeInfo.title        ?? "Unknown",
+      authors:     book?.volumeInfo.authors      ?? [],
+      description: book?.volumeInfo.description  ?? "",
+      image_url:   book?.volumeInfo.imageLinks?.thumbnail ?? "",
+    });
 
-  /* rating */
-  const rate = async (v:number) => {
-    if(!user) return setAuxErr("Login to rate"); setAuxErr("");
-    await ensureBook();
-    await api.post("/api/ratings",
-      { google_book_id:id, rating:v },
-      { headers:{ Authorization:`Bearer ${localStorage.getItem("token")}` } });
-    setRating(v);
-    const { data } = await api.get(`/api/ratings/${id}/average`);
-    setAvg(data.average_rating); setCount(data.rating_count);
+  /* ---------- rating ---------- */
+  const handleRate = async (value: number) => {
+    if (!user)        return setErr("Login to rate");
+    setErr("");
+
+    try {
+      await ensureBook();
+      await api.post(
+        "/api/ratings",
+        { google_book_id: id, rating: value },
+        { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+      );
+      setRating(value);
+
+      const { data } = await api.get(`/api/ratings/${id}/average`);
+      setAvg(data.average_rating);
+      setCount(data.rating_count);
+    } catch (e:any) {
+      setErr(e.response?.data?.error || "Could not save rating");
+    }
   };
 
-  /* comment */
-  const addComment = async () => {
-    if(!user) return setAuxErr("Login to comment");
-    if(!comment.trim()) return setAuxErr("Empty comment");
-    setAuxErr("");
-    await ensureBook();
-    const { data } = await api.post("/api/comments",
-      { google_book_id:id, comment:comment.trim() },
-      { headers:{ Authorization:`Bearer ${localStorage.getItem("token")}` } });
-    setComments([data.comment,...comments]);
-    setComment("");
+  /* ---------- comment ---------- */
+  const handleAddComment = async () => {
+    if (!user)             return setErr("Login to comment");
+    if (!comment.trim())   return setErr("Comment can’t be empty");
+    setErr("");
+
+    try {
+      await ensureBook();
+      const { data } = await api.post(
+        "/api/comments",
+        { google_book_id: id, comment: comment.trim() },
+        { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+      );
+      setComments([data.comment, ...comments]);
+      setComment("");
+    } catch (e:any) {
+      setErr(e.response?.data?.error || "Couldn’t add comment");
+    }
   };
 
-  /* ── render ── */
-  if(bookErr) return <p style={{color:"tomato",padding:32}}>{bookErr}</p>;
-  if(!book)   return <p style={{padding:32}}>Loading…</p>;
+  /* ---------- render ---------- */
+  if (err) return (
+    <div style={{ padding: 32 }}>
+      <button onClick={() => navigate(-1)} style={btnBack}>← Back</button>
+      <p style={{ color: "red" }}>{err}</p>
+    </div>
+  );
+
+  if (!book) return <p style={{ padding: 32 }}>Loading…</p>;
 
   return (
-    <div style={card}>
-      <button onClick={()=>nav(-1)} style={btnBack}>← Back</button>
+    <div style={{ padding: 32, maxWidth: 1100, margin: "0 auto" }}>
+      <button onClick={() => navigate(-1)} style={btnBack}>← Back</button>
 
-      <h1 style={{marginTop:0}}>{book.volumeInfo.title}</h1>
-      {auxErr && <p style={{color:"#f1c40f"}}>{auxErr}</p>}
+      <h1>{book.volumeInfo.title}</h1>
 
       {/* cover + description */}
-      <div style={row}>
-        <img
-          src={book.volumeInfo.imageLinks?.thumbnail}
-          alt={book.volumeInfo.title}
-          style={cover}
-        />
-        <div style={{flex:1}}>
+      <section style={sectionFlex}>
+        <div style={coverWrap}>
+          <img
+            src={book.volumeInfo.imageLinks?.thumbnail}
+            alt={book.volumeInfo.title}
+            style={coverImg}
+          />
+        </div>
+
+        <div style={{ lineHeight: 1.5 }}>
           <p
             dangerouslySetInnerHTML={{
               __html: book.volumeInfo.description ?? "No description",
             }}
           />
         </div>
-      </div>
+      </section>
 
       {/* rating */}
-      <div style={{marginTop:24}}>
-        <h3>Rate this book</h3>
-        {!user && <p>Please <Link to="/">login</Link> to rate</p>}
-        <StarRating onRatingSelect={rate}/>
-        <span style={pill}>{avg.toFixed(1)} ★</span>
-        <small>&nbsp;({count})</small>
-        {rating>0 && <p>Your rating: {rating} ★</p>}
-      </div>
+      <h2>Rate this book</h2>
+      {!user && <p>Please <Link to="/">login</Link> to rate</p>}
+      <StarRating onRatingSelect={handleRate} />
+      <p>Average {avg} ★ ({count})</p>
+      {rating > 0 && <p>Your rating: {rating} ★</p>}
 
       {/* comments */}
-      <div style={{marginTop:24}}>
-        <h3>Comments</h3>
-        {!user && <p>Please <Link to="/">login</Link> to comment</p>}
-        <textarea
-          rows={3} style={ta} disabled={!user}
-          value={comment} onChange={e=>setComment(e.target.value)}
-        />
-        <br/>
-        <button onClick={addComment} disabled={!user} style={btn}>
-          Add Comment
-        </button>
+      <h2>Comments</h2>
+      {!user && <p>Please <Link to="/">login</Link> to comment</p>}
+      <textarea
+        rows={3}
+        style={textArea}
+        value={comment}
+        onChange={e => setComment(e.target.value)}
+        disabled={!user}
+      />
+      <br />
+      <button onClick={handleAddComment} disabled={!user} style={btnMain}>Add</button>
 
-        <ul style={ul}>
-          {comments.map(c=>(
-            <li key={c.comment_id} style={li}>
-              <p>{c.comment}</p>
-              <small>
-                {c.username} • {new Date(c.created_at).toLocaleDateString()}
-                {c.is_edited && " (edited)"}
-              </small>
-            </li>
-          ))}
-        </ul>
-      </div>
+      <ul style={{ listStyle: "none", padding: 0, marginTop: 24 }}>
+        {comments.map(c => (
+          <li key={c.comment_id} style={commentItem}>
+            <p>{c.comment}</p>
+            <small>
+              {c.username} – {new Date(c.created_at).toLocaleDateString()}
+              {c.is_edited && " (edited)"}
+            </small>
+          </li>
+        ))}
+      </ul>
     </div>
   );
-}
+};
 
-/* ─────────────── inline styles ─────────────── */
-const card:React.CSSProperties={
-  maxWidth:900,margin:"32px auto",padding:32,
-  background:"#1e1e1e",color:"#f3f3f3",
-  borderRadius:12,boxShadow:"0 4px 18px #0008",
+/* ---------- inline styles ---------- */
+const btnBack: React.CSSProperties = {
+  marginBottom: 16,
+  padding: "4px 12px",
+  border: "none",
+  borderRadius: 4,
+  background: "#3498db",
+  color: "#fff",
+  cursor: "pointer",
 };
-const row:React.CSSProperties={
-  display:"flex",gap:32,alignItems:"flex-start",
+const btnMain: React.CSSProperties = {
+  ...btnBack,
+  marginTop: 8,
 };
-const cover:React.CSSProperties={
-  width:180,height:260,objectFit:"cover",
-  borderRadius:8,boxShadow:"0 0 10px #0005",
+const sectionFlex: React.CSSProperties = {
+  display: "flex",
+  gap: 32,
+  flexWrap: "wrap",
 };
-const pill:React.CSSProperties={
-  display:"inline-block",background:"#444",
-  borderRadius:20,padding:"2px 12px",fontWeight:600,marginLeft:8,
+const coverWrap: React.CSSProperties = {
+  width: 200,
+  height: 300,
+  flexShrink: 0,
+  background: "#111",
+  borderRadius: 8,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  overflow: "hidden",
 };
-const ta:React.CSSProperties={
-  width:"100%",padding:8,fontSize:16,borderRadius:6,
-  background:"#2b2b2b",color:"#f3f3f3",border:"1px solid #555"
+const coverImg: React.CSSProperties = {
+  width: "100%",
+  height: "100%",
+  objectFit: "contain",
 };
-const ul:React.CSSProperties={listStyle:"none",padding:0,marginTop:16};
-const li:React.CSSProperties={padding:"12px 0",borderBottom:"1px solid #333"};
-const btn:React.CSSProperties={
-  marginTop:8,padding:"6px 16px",border:"none",borderRadius:6,
-  background:"#3498db",color:"#fff",cursor:"pointer"
+const textArea: React.CSSProperties = {
+  width: "100%",
+  padding: 8,
+  fontSize: 16,
+  borderRadius: 4,
+  border: "1px solid #555",
+  background: "#1e1e1e",
+  color: "#fff",
 };
-const btnBack:React.CSSProperties={...btn,marginBottom:16};
+const commentItem: React.CSSProperties = {
+  borderBottom: "1px solid #444",
+  padding: "12px 0",
+  lineHeight: 1.4,
+};
 
+export default BookInteraction;
